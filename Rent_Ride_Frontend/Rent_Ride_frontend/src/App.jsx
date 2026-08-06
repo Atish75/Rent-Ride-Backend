@@ -56,16 +56,20 @@ function HomePage() {
         body: JSON.stringify({ 
           car: selectedCar.id, 
           start_date: startDate,
-          end_date: endDate
+          end_date: endDate,
+          start_point: startPoint,   
+          end_point: endPoint    
         })
       });
 
       if (response.status === 201) {
         alert("Booking successful! 🎉");
         setSelectedCar(null); // Modal reset
+        setStartPoint('');   
+        setEndPoint('');   
         navigate("/booked-cars");
       } else if (response.status === 401) {
-        alert("Pehle login kijiye!");
+        alert("Please Login First!");
         navigate("/login");
       } else {
         const errorData = await response.json();
@@ -90,8 +94,23 @@ const [searchTerm, setSearchTerm] = useState('');
       car.transmission?.toLowerCase().includes(query)
     );
   });
-
-  
+const [isOwner, setIsOwner] = useState(false);
+const [isDriver, setIsDriver] = useState(false);
+useEffect(() => {
+  if (!isAuthenticated) return;
+  const token = localStorage.getItem('access_token');
+  fetch("http://127.0.0.1:8000/profile/", {
+    headers: { "Authorization": `Bearer ${token}` }
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      setIsDriver(data.is_driver);
+      setIsOwner(data.is_owner);
+    })
+    .catch((err) => console.error("Profile fetch error:", err));
+}, [isAuthenticated]);
+const [startPoint, setStartPoint] = useState('');
+const [endPoint, setEndPoint] = useState('');
   return (
     <div style={{ padding: "2rem", fontFamily: "Arial, sans-serif" }}>
       
@@ -104,7 +123,22 @@ const [searchTerm, setSearchTerm] = useState('');
             
               <button onClick={() => navigate("/booked-cars")} style={{ marginRight: "1rem" }}>My Bookings</button>
               <button onClick={logoutUser} style={{marginRight:"1rem", backgroundColor: "#dc3545", color: "#fff" }}>Logout</button>
-              
+              {isDriver && (
+              <button 
+              onClick={() => navigate("/driver-dashboard")} 
+              style={{ marginRight: "1rem", padding: "0.5rem 1rem", backgroundColor: "#ffc107", color: "#000", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "bold" }}
+              >
+              🚕 Driver Dashboard
+              </button>
+              )}
+              {isOwner && (
+                <button 
+                 onClick={() => navigate("/owner-dashboard")} 
+                 style={{ marginRight: "1rem", padding: "0.5rem 1rem", backgroundColor: "#6f42c1", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer" }}
+                 >
+                🚙 My Cars
+              </button>
+              )}
               <button onClick={() => navigate("/profile")} style={{ marginRight: "1rem"}}>
                 Profile 👤
               </button>
@@ -143,21 +177,14 @@ const [searchTerm, setSearchTerm] = useState('');
           
         />
         <>
-        <button 
+        {isOwner && (
+          <button 
           onClick={() => navigate("/add-cars")} 
-          style={{ 
-            padding: "0.5rem 1rem", 
-            backgroundColor: "#4bb965", 
-            color: "#fff", 
-            border: "none", 
-            borderRadius: "25px", 
-            cursor: "pointer", 
-            marginRight: "1rem",
-            
-          }}
-        >
+          style={{ padding: "0.5rem 1rem", backgroundColor: "#4bb965", color: "#fff", border: "none", borderRadius: "25px", cursor: "pointer", marginRight: "1rem" }}
+            >
           ➕ Add Car
-        </button>
+            </button>
+          )}
         </>
       </div>
 
@@ -195,6 +222,28 @@ const [searchTerm, setSearchTerm] = useState('');
           <div style={{ backgroundColor: "#fff", padding: "2rem", borderRadius: "8px", width: "300px" }}>
             <h3>Book {selectedCar.name}</h3>
             <form onSubmit={handleBookSubmit}>
+              <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block" }}>Pickup Location:</label>
+          <input
+            type="text"
+            value={startPoint}
+            onChange={(e) => setStartPoint(e.target.value)}
+            placeholder="Where should we pick you up?"
+            required
+            style={{ width: "100%", padding: "0.5rem" }}
+          />
+        </div>
+        <div style={{ marginBottom: "1rem" }}>
+          <label style={{ display: "block" }}>Final Destination:</label>
+          <input
+            type="text"
+            value={endPoint}
+            onChange={(e) => setEndPoint(e.target.value)}
+            placeholder="Where are you headed?"
+            required
+            style={{ width: "100%", padding: "0.5rem" }}
+          />
+        </div>
               <div style={{ marginBottom: "1rem" }}>
                 <label style={{ display: "block" }}>Start Date:</label>
                 <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required style={{ width: "100%" }} />

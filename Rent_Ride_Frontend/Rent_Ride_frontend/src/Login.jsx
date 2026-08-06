@@ -1,6 +1,6 @@
 import { useState, useContext } from 'react';
 import { AuthContext } from './AuthContext.jsx';
-import { useNavigate, Link } from 'react-router-dom'; // 1. Link import karein
+import { useNavigate, Link } from 'react-router-dom'; 
 
 export default function Login() {
     const [username, setUsername] = useState('');
@@ -11,16 +11,37 @@ export default function Login() {
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setErrorMsg('');
+    e.preventDefault();
+    setErrorMsg('');
 
-        const result = await loginUser(username, password);
-        if (result.success) {
-            navigate('/'); // Login hone par home page par redirect
-        } else {
-            setErrorMsg(result.error);
+    const result = await loginUser(username, password);
+    
+    if (result.success) {
+        const access_token = localStorage.getItem('access_token');
+
+        try {
+            const profileRes = await fetch("http://127.0.0.1:8000/profile/", {
+                headers: { "Authorization": `Bearer ${access_token}` }
+            });
+
+            if (profileRes.ok) {
+                const profile = await profileRes.json();
+
+                if (profile.is_driver === true || profile.is_owner === true) {
+                    navigate("/role-select");
+                } else {
+                    navigate("/");
+                }
+            }
+        } catch (err) {
+            console.error("Profile Fetch Error:", err);
+            navigate('/');
         }
-    };
+
+    } else {
+        setErrorMsg(result.error);
+    }
+};
 
     return (
         <div style={{ maxWidth: '400px', margin: '3rem auto', padding: '2rem', border: '1px solid #ddd', borderRadius: '10px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
@@ -53,7 +74,6 @@ export default function Login() {
                 </button>
             </form>
 
-            {/* 2. 👈 DON'T HAVE AN ACCOUNT OPTION */}
             <p style={{ textAlign: 'center', marginTop: '1.5rem', color: '#555', fontSize: '0.95rem' }}>
                 Don't have an account?{' '}
                 <Link to="/register" style={{ color: '#007bff', textDecoration: 'none', fontWeight: 'bold' }}>

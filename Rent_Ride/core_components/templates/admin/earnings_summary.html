@@ -1,0 +1,49 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>💰 Earnings Summary</h1>
+<h2>Total Company Earnings (8%): ₹{{ company_total }}</h2>
+
+<h3 style="margin-top:2rem;">🚕 Driver Earnings</h3>
+<table style="width:100%; border-collapse: collapse;">
+  <tr style="background:#f0f0f0;"><th style="text-align:left;padding:8px;">Driver</th><th style="padding:8px;">Trips</th><th style="padding:8px;">Gross Revenue</th><th style="padding:8px;">Earning (25%)</th></tr>
+  {% for row in driver_rows %}
+  <tr style="border-bottom:1px solid #ddd;">
+    <td style="padding:8px;">{{ row.name }}</td>
+    <td style="padding:8px; text-align:center;">{{ row.trips }}</td>
+    <td style="padding:8px; text-align:right;">₹{{ row.gross }}</td>
+    <td style="padding:8px; text-align:right; color:green; font-weight:bold;">₹{{ row.earning }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="4" style="padding:8px;">No completed trips yet.</td></tr>
+  {% endfor %}
+</table>
+
+<h3 style="margin-top:2rem;">🚙 Owner Earnings</h3>
+<table style="width:100%; border-collapse: collapse;">
+  <tr style="background:#f0f0f0;"><th style="text-align:left;padding:8px;">Owner</th><th style="padding:8px;">Trips</th><th style="padding:8px;">Gross Revenue</th><th style="padding:8px;">Earning (67%)</th></tr>
+  {% for row in owner_rows %}
+  <tr style="border-bottom:1px solid #ddd;">
+    <td style="padding:8px;">{{ row.name }}</td>
+    <td style="padding:8px; text-align:center;">{{ row.trips }}</td>
+    <td style="padding:8px; text-align:right;">₹{{ row.gross }}</td>
+    <td style="padding:8px; text-align:right; color:green; font-weight:bold;">₹{{ row.earning }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="4" style="padding:8px;">No completed trips yet.</td></tr>
+  {% endfor %}
+</table>
+
+<h3 style="margin-top:2rem;">👤 Customer Spending</h3>
+<table style="width:100%; border-collapse: collapse;">
+  <tr style="background:#f0f0f0;"><th style="text-align:left;padding:8px;">Customer</th><th style="padding:8px;">Trips</th><th style="padding:8px;">Total Spent</th></tr>
+  {% for row in customer_rows %}
+  <tr style="border-bottom:1px solid #ddd;">
+    <td style="padding:8px;">{{ row.name }}</td>
+    <td style="padding:8px; text-align:center;">{{ row.trips }}</td>
+    <td style="padding:8px; text-align:right;">₹{{ row.spent }}</td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="3" style="padding:8px;">No completed trips yet.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

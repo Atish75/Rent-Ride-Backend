@@ -11,7 +11,7 @@ export default function MobileLocationSender() {
     // Location Post Function
     const sendLocationData = async (latitude, longitude) => {
       try {
-        const response = await fetch(`http://10.172.203.177:8000/cars/${carId}/location/`, {
+        const response = await fetch(`http://127.0.0.1:8000/cars/${carId}/location/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ latitude, longitude })

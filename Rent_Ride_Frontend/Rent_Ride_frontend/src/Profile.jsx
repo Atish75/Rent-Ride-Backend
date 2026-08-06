@@ -70,6 +70,22 @@ export default function ProfilePage() {
 
   if (loading) return <p style={{ textAlign: "center", marginTop: "3rem" }}>Loading profile...</p>;
 
+  const handleToggleDriver = async () => {
+  const res = await fetch("http://127.0.0.1:8000/profile/toggle-driver/", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+  const data = await res.json();
+  alert(data.is_driver ? "You're now a registered driver!" : "Driver mode disabled.");
+};
+const handleToggleOwner = async () => {
+  const res = await fetch("http://127.0.0.1:8000/profile/toggle-owner/", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}` }
+  });
+  const data = await res.json();
+  alert(data.is_owner ? "You're now a registered car owner!" : "Owner mode disabled.");
+};
   return (
     <div style={{ maxWidth: "600px", margin: "2rem auto", padding: "2rem", border: "1px solid #e0e0e0", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)", backgroundColor: "#fff", fontFamily: "Arial, sans-serif" }}>
       
@@ -105,6 +121,12 @@ export default function ProfilePage() {
             style={{ marginTop: "1rem", padding: "0.7rem", backgroundColor: "#007bff", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
           >
             ✏️ Edit Profile
+          </button>
+          <button onClick={handleToggleDriver} style={{ marginTop: "0.5rem", padding: "0.6rem", backgroundColor: "#ffc107", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}>
+          🚕 Toggle Driver Mode
+          </button>
+          <button onClick={handleToggleOwner} style={{ marginTop: "0.5rem", padding: "0.6rem", backgroundColor: "#6f42c1", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}>
+          🚙 Toggle Car Owner Mode
           </button>
         </div>
       ) : (

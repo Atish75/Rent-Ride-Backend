@@ -1,8 +1,10 @@
 from django.db import models
 from cloudinary.models import CloudinaryField
+from django.contrib.auth.models import User
 # Create your models here.
 
 class Car(models.Model):
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='owned_cars')
     name = models.CharField(max_length=100)              # Car name (e.g., Toyota Corolla)
     brand = models.CharField(max_length=50)              # Brand (e.g., Toyota, BMW)
     model_year = models.PositiveIntegerField()           # Year of manufacture
@@ -28,7 +30,7 @@ class Car(models.Model):
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 import cloudinary
-from django.contrib.auth.models import User
+
 @receiver(pre_delete, sender=Car)
 def delete_car_image(sender, instance, **kwargs):
     if instance.image:
@@ -42,22 +44,26 @@ class BookedCar(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE)
     customer_name = models.CharField(max_length=100)
     customer_email = models.EmailField(blank=True, null=True)
+    start_point = models.CharField(max_length=255, blank=True, null=True)  
+    end_point = models.CharField(max_length=255, blank=True, null=True)  
     start_date = models.DateField()
     end_date = models.DateField()
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
-    status = models.CharField(max_length=20, default="BOOKED")
+    status = models.CharField(max_length=30, default="BOOKED")
     created_at = models.DateTimeField(auto_now_add=True)
+    driver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='driving_bookings') 
 
     def __str__(self):
         return f"{self.car.name} - {self.status}"
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["car"], name="unique_car_booking")
-        ]
+    # class Meta:
+    #     constraints = [
+    #         models.UniqueConstraint(fields=["car"], name="unique_car_booking")
+    #     ]
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    phone = models.CharField(max_length=15, blank=True, null=True)
-
+    phone = models.CharField(max_length=10, blank=True, null=True)
+    is_driver = models.BooleanField(default=False)  
+    is_owner = models.BooleanField(default=False)
     def __str__(self):
         return f"{self.user.username}'s Profile"

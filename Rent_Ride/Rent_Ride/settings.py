@@ -9,21 +9,24 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-h(pab$%_od@305&ny@rsp-vys(y4-n#x1@q5k*)lwy@j+&+e=!'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['*']
 
@@ -88,18 +91,18 @@ WSGI_APPLICATION = 'Rent_Ride.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'rent_ride_db',       # your database name
-        'USER': 'root',               # your MySQL username
-        'PASSWORD': 'Theguy75!',  # your MySQL password
-        'HOST': 'localhost',          # or IP if remote
-        'PORT': '3306',               # default MySQL port
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT'),
     }
 }
 import cloudinary
 cloudinary.config(
-    cloud_name='dbq5runwi',
-    api_key='343836919479683',
-    api_secret='vlfq7W3ZQeQgviY_YmhNG0K7vtA',
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key= os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret= os.environ.get('CLOUDINARY_API_SECRET'),
     secure=True
 )
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

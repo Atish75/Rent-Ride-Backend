@@ -4,14 +4,16 @@ from .models import Car,BookedCar
 
 class CarSerializer(serializers.ModelSerializer):
     image = serializers.ImageField()
+    owner_username = serializers.CharField(source='owner.username', read_only=True, default=None)
     class Meta:
         model = Car
         fields = '__all__'
+        read_only_fields = ['owner']
 
 
 class BookedCarSerializer(serializers.ModelSerializer):
     car = serializers.PrimaryKeyRelatedField(queryset=Car.objects.all())
-
+    driver_username = serializers.CharField(source='driver.username', read_only=True, default=None)
     class Meta:
         model = BookedCar
         fields = "__all__"

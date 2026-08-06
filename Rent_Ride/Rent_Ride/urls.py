@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path,include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from core_components.views import RegisterUserAPIView,LiveLocationAPIView
+from core_components.views import RegisterUserAPIView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,6 +27,6 @@ urlpatterns = [
     # 🔄 Token Refresh karne ke liye
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/register/', RegisterUserAPIView.as_view(), name='register_user'),
-    path('cars/<int:car_id>/location/', LiveLocationAPIView.as_view(), name='live_location'),
+    
     
 ]
