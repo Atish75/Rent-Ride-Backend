@@ -115,7 +115,7 @@ class RegisterUserAPIView(APIView):
         try:
             # Check username pehle se toh nahi hai
             if User.objects.filter(username=data['username']).exists():
-                return Response({"error": "Username pehle se hi le liya hai."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Username Already Exists."}, status=status.HTTP_400_BAD_REQUEST)
                 
             # Naya user create karein
             user = User.objects.create(
@@ -156,7 +156,7 @@ class BookCarAPIView(APIView):
             end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
             
             if start_date >= end_date:
-                return Response({"error": "End date, Start date ke baad ki honi chahiye."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "End date, must ahead of starting date."}, status=status.HTTP_400_BAD_REQUEST)
 
             days = (end_date - start_date).days
             total_price = days * car.price_per_day
@@ -290,10 +290,10 @@ class LiveLocationAPIView(APIView):
                 car.save()
                 return Response({"message": "Location updated!"}, status=status.HTTP_200_OK)
             else:
-                return Response({"error": "Latitude ya Longitude missing hai."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Latitude or Longitude  is missing."}, status=status.HTTP_400_BAD_REQUEST)
 
         except Car.DoesNotExist:
-            return Response({"error": "Car nahi mili."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Car not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
 class AvailableBookingsAPIView(APIView):
