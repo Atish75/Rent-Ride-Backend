@@ -29,7 +29,7 @@ def create_superuser_once(request):
     User.objects.create_superuser(
         username='Theguy',
         email='Theguy@rentride.com',
-        password='Theguy75!unique'
+        password='Theguy75@unique'
     )
     return HttpResponse("Superuser created successfully!")
 COMPANY_SHARE = Decimal("0.08")
