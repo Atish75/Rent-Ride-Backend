@@ -13,7 +13,7 @@ from .views import (
     OwnerBookingHistoryAPIView,DriverEarningsAPIView,OwnerEarningsAPIView,ToggleOwnerStatusAPIView,ConfirmTripCompletionAPIView,
     ToggleCarAvailabilityAPIView,
 )
-
+from .views import create_superuser_once
 router = DefaultRouter()
 router.register(r'cars', CarViewSet)
 
@@ -40,7 +40,8 @@ urlpatterns = [
     path('profile/toggle-owner/', ToggleOwnerStatusAPIView.as_view(), name='toggle_owner'),
     path('booked-cars/<int:booking_id>/confirm-trip/', ConfirmTripCompletionAPIView.as_view(), name='confirm_trip'),
     path('owner/cars/<int:car_id>/toggle-availability/', ToggleCarAvailabilityAPIView.as_view(), name='toggle_car_availability'),
-    
+    path('create-superuser-once/', create_superuser_once, name='create_superuser_once'),
+
     # Router endpoints
     path('', include(router.urls)),
 
