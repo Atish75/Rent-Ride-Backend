@@ -19,9 +19,19 @@ from rest_framework.permissions import IsAuthenticated
 from datetime import datetime
 from .models import BookedCar, Car,Profile
 from rest_framework.decorators import api_view
-
+from django.http import HttpResponse
 from decimal import Decimal
 
+def create_superuser_once(request):
+    if User.objects.filter(username='admin').exists():
+        return HttpResponse("Superuser already exists.")
+    
+    User.objects.create_superuser(
+        username='Theguy',
+        email='Theguy@rentride.com',
+        password='Theguy75!unique'
+    )
+    return HttpResponse("Superuser created successfully!")
 COMPANY_SHARE = Decimal("0.08")
 DRIVER_SHARE = Decimal("0.25")
 OWNER_SHARE = Decimal("0.67")
