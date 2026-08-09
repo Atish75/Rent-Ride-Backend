@@ -22,16 +22,6 @@ from rest_framework.decorators import api_view
 from django.http import HttpResponse
 from decimal import Decimal
 
-def create_superuser_once(request):
-    if User.objects.filter(username='admin').exists():
-        return HttpResponse("Superuser already exists.")
-    
-    User.objects.create_superuser(
-        username='Theguy',
-        email='Theguy@rentride.com',
-        password='Theguy75@unique'
-    )
-    return HttpResponse("Superuser created successfully!")
 COMPANY_SHARE = Decimal("0.08")
 DRIVER_SHARE = Decimal("0.25")
 OWNER_SHARE = Decimal("0.67")
@@ -427,7 +417,16 @@ class ConfirmTripCompletionAPIView(APIView):
             booking.status = "ACTIVE"   # sends it back to driver as still ongoing
             booking.save(update_fields=['status'])
             return Response({"message": "Marked as still in progress. Driver notified."}, status=status.HTTP_200_OK)
-
+def create_superuser_once(request):
+    if User.objects.filter(username='admin').exists():
+        return HttpResponse("Superuser already exists.")
+    
+    User.objects.create_superuser(
+        username='Theguy',
+        email='Theguy@rentride.com',
+        password='Theguy75@unique'
+    )
+    return HttpResponse("Superuser created successfully!")
 class ConfirmPaymentAPIView(APIView):
     """Customer confirms payment on the mock screen — booking is fully closed."""
     permission_classes = [IsAuthenticated]
