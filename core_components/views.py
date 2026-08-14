@@ -21,7 +21,29 @@ from .models import BookedCar, Car,Profile
 from rest_framework.decorators import api_view
 from django.http import HttpResponse
 from decimal import Decimal
+import math
 
+<<<<<<< HEAD
+=======
+def haversine_km(lat1, lon1, lat2, lon2):
+    R = 6371  # Earth's radius in km
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return round(R * c, 2)
+#for creating super user on render it created
+def create_superuser_once(request):
+    if User.objects.filter(username='admin').exists():
+        return HttpResponse("Superuser already exists.")
+    
+    User.objects.create_superuser(
+        username='Theguy',
+        email='Theguy@rentride.com',
+        password='Theguy75@unique'
+    )
+    return HttpResponse("Superuser created successfully!")
+>>>>>>> f87747c (Added Live Location with Websocket)
 COMPANY_SHARE = Decimal("0.08")
 DRIVER_SHARE = Decimal("0.25")
 OWNER_SHARE = Decimal("0.67")
@@ -133,48 +155,76 @@ class BookCarAPIView(APIView):
     def post(self, request):
         data = request.data
         car_id = data.get('car')
-        start_date_str = data.get('start_date')
-        end_date_str = data.get('end_date')
-        start_point = data.get('start_point', '')
-        end_point = data.get('end_point', '')
-
-        if not start_date_str or not end_date_str:
-            return Response({"error": "Start date aur End date both select ."}, status=status.HTTP_400_BAD_REQUEST)
+        trip_type = data.get('trip_type', 'DATE_RANGE')
 
         with transaction.atomic():
-            #  Car ko lock kar
             car = Car.objects.select_for_update().get(id=car_id)
 
-            # only block if there's an ACTIVE booking, not any historical one
             if BookedCar.objects.filter(car=car).exclude(status__in=["COMPLETED", "CANCELLED"]).exists():
-                return Response(
-                    {"error": "Ye car pehle se hi booked hai! Kisi aur car ko select karo."},
-                    status=status.HTTP_400_BAD_REQUEST
+                return Response({"error": "Ye car pehle se hi booked hai! Kisi aur car ko select karo."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if trip_type == 'POINT_TO_POINT':
+                start_lat = data.get('start_lat')
+                start_lng = data.get('start_lng')
+                end_lat = data.get('end_lat')
+                end_lng = data.get('end_lng')
+                start_point = data.get('start_point', '')
+                end_point = data.get('end_point', '')
+
+                if None in [start_lat, start_lng, end_lat, end_lng]:
+                    return Response({"error": "select both pickup and drop ."}, status=status.HTTP_400_BAD_REQUEST)
+
+                distance = haversine_km(float(start_lat), float(start_lng), float(end_lat), float(end_lng))
+                total_price = round(distance * float(car.price_per_km), 2)
+
+                booking = BookedCar.objects.create(
+                    user=request.user,
+                    car=car,
+                    customer_name=request.user.username,
+                    trip_type='POINT_TO_POINT',
+                    start_point=start_point,
+                    end_point=end_point,
+                    start_lat=start_lat,
+                    start_lng=start_lng,
+                    end_lat=end_lat,
+                    end_lng=end_lng,
+                    distance_km=distance,
+                    total_price=total_price,
+                    status="BOOKED"
                 )
+                return Response({"message": "Car successfully booked!", "distance_km": distance, "total_price": str(total_price)}, status=status.HTTP_201_CREATED)
 
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
-            
-            if start_date >= end_date:
-                return Response({"error": "End date, must ahead of starting date."}, status=status.HTTP_400_BAD_REQUEST)
+            else:  # DATE_RANGE — existing logic
+                start_date_str = data.get('start_date')
+                end_date_str = data.get('end_date')
+                start_point = data.get('start_point', '')
+                end_point = data.get('end_point', '')
 
-            days = (end_date - start_date).days
-            total_price = days * car.price_per_day
+                if not start_date_str or not end_date_str:
+                    return Response({"error": " select Start date and End date both ."}, status=status.HTTP_400_BAD_REQUEST)
 
-            
-            booking = BookedCar.objects.create(
-                user=request.user,
-                car=car,
-                customer_name=request.user.username,
-                start_point=start_point,
-                end_point=end_point,
-                start_date=start_date,
-                end_date=end_date,
-                total_price=total_price,
-                status="BOOKED"
-            )
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+                end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
 
-            return Response({"message": "Car successfully booked!"}, status=status.HTTP_201_CREATED)
+                if start_date >= end_date:
+                    return Response({"error": "End date, must br ahead of start date."}, status=status.HTTP_400_BAD_REQUEST)
+
+                days = (end_date - start_date).days
+                total_price = days * car.price_per_day
+
+                booking = BookedCar.objects.create(
+                    user=request.user,
+                    car=car,
+                    customer_name=request.user.username,
+                    trip_type='DATE_RANGE',
+                    start_point=start_point,
+                    end_point=end_point,
+                    start_date=start_date,
+                    end_date=end_date,
+                    total_price=total_price,
+                    status="BOOKED"
+                )
+                return Response({"message": "Car successfully booked!"}, status=status.HTTP_201_CREATED)
 class BookedCarsListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 

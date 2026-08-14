@@ -19,6 +19,7 @@ class Car(models.Model):
                  ('Electric', 'Electric'), ('Hybrid', 'Hybrid')]
     )
     price_per_day = models.DecimalField(max_digits=8, decimal_places=2)  # Rental price
+    price_per_km = models.DecimalField(max_digits=8, decimal_places=2, default=0.0)  
     image = CloudinaryField('image',folder='rent_ride_project/cars')  # Car image
     available = models.BooleanField(default=True)        # Availability status
     latitude = models.FloatField(default=22.6139)   # Default Delhi Lat
@@ -46,8 +47,14 @@ class BookedCar(models.Model):
     customer_email = models.EmailField(blank=True, null=True)
     start_point = models.CharField(max_length=255, blank=True, null=True)  
     end_point = models.CharField(max_length=255, blank=True, null=True)  
-    start_date = models.DateField()
-    end_date = models.DateField()
+    start_lat = models.FloatField(blank=True, null=True)   #  new
+    start_lng = models.FloatField(blank=True, null=True)   #  new
+    end_lat = models.FloatField(blank=True, null=True)     #  new
+    end_lng = models.FloatField(blank=True, null=True)     #  new
+    distance_km = models.FloatField(blank=True, null=True) #  new
+    trip_type = models.CharField(max_length=20, choices=[('DATE_RANGE', 'Multi-day Rental'), ('POINT_TO_POINT', 'One-way Trip')], default='DATE_RANGE')
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     status = models.CharField(max_length=30, default="BOOKED")
     created_at = models.DateTimeField(auto_now_add=True)

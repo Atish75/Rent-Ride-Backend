@@ -34,6 +34,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',         
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'channels',
     
     
 ]
@@ -85,7 +87,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Rent_Ride.wsgi.application'
 
+ASGI_APPLICATION = 'Rent_Ride.asgi.application'
 
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
+    }
+}
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
