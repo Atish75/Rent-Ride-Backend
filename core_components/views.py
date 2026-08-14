@@ -1,30 +1,25 @@
 from django.shortcuts import render
-
-# Create your views here.
-import cloudinary
-import cloudinary.uploader
-from rest_framework import viewsets,status,filters,permissions
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from .models import Car,BookedCar,Profile
-from .serializers import CarSerializer,BookedCarSerializer
 from django.db import transaction
 from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
+from django.http import HttpResponse
+
+import cloudinary
+import cloudinary.uploader
+from rest_framework import viewsets, status, filters, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from django.contrib.auth.hashers import make_password
-from rest_framework.permissions import AllowAny
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action, api_view
+from rest_framework.permissions import AllowAny, IsAuthenticated
+
 from datetime import datetime
-from .models import BookedCar, Car,Profile
-from rest_framework.decorators import api_view
-from django.http import HttpResponse
 from decimal import Decimal
 import math
 
-<<<<<<< HEAD
-=======
+from .models import Car, BookedCar, Profile
+from .serializers import CarSerializer, BookedCarSerializer
+
+# --- HELPER FUNCTIONS ---
 def haversine_km(lat1, lon1, lat2, lon2):
     R = 6371  # Earth's radius in km
     dlat = math.radians(lat2 - lat1)
@@ -32,9 +27,10 @@ def haversine_km(lat1, lon1, lat2, lon2):
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     return round(R * c, 2)
-#for creating super user on render it created
+
+# One-time superuser creator for Render
 def create_superuser_once(request):
-    if User.objects.filter(username='admin').exists():
+    if User.objects.filter(username='Theguy').exists():
         return HttpResponse("Superuser already exists.")
     
     User.objects.create_superuser(
@@ -43,7 +39,7 @@ def create_superuser_once(request):
         password='Theguy75@unique'
     )
     return HttpResponse("Superuser created successfully!")
->>>>>>> f87747c (Added Live Location with Websocket)
+
 COMPANY_SHARE = Decimal("0.08")
 DRIVER_SHARE = Decimal("0.25")
 OWNER_SHARE = Decimal("0.67")
@@ -55,27 +51,30 @@ def calculate_split(total_price):
         "driver": round(total * DRIVER_SHARE, 2),
         "owner": round(total * OWNER_SHARE, 2),
     }
+
+# --- VIEWSETS ---
 class CarViewSet(viewsets.ModelViewSet):
     queryset = Car.objects.all()
     serializer_class = CarSerializer
-    #Search filter enable 
     filter_backends = [filters.SearchFilter]
-    
-    #  In fields par search chalega (car name, brand, etc.)
     search_fields = ['name', 'brand']
+
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
+
     def get_queryset(self):
         booked_car_ids = BookedCar.objects.exclude(status__in=["COMPLETED", "CANCELLED"]).values_list('car_id', flat=True)
         return Car.objects.exclude(id__in=booked_car_ids).filter(available=True)
+
     def perform_create(self, serializer):
         profile, _ = Profile.objects.get_or_create(user=self.request.user)
         if not profile.is_owner:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You must enable Car Owner mode to add a car.")
-        serializer.save(owner=self.request.user) 
+        serializer.save(owner=self.request.user)
+
     def destroy(self, request, *args, **kwargs):
         car = self.get_object()
 
@@ -107,7 +106,6 @@ class BookedCarViewSet(viewsets.ModelViewSet):
                 car=car,
                 customer_name=request.data.get("customer_name"),
                 customer_email=request.data.get("customer_email"),
-                
                 status="BOOKED"
             )
             return Response({"success": "Booking created"}, status=status.HTTP_201_CREATED)
@@ -129,26 +127,25 @@ class BookedCarViewSet(viewsets.ModelViewSet):
         booking.save()
         return Response({"success": "Car returned"})
 
+# --- API VIEWS ---
 class RegisterUserAPIView(APIView):
-    permission_classes = [AllowAny] # Koi bhi access kar sakta hai
+    permission_classes = [AllowAny]
 
     def post(self, request):
         data = request.data
         try:
-            # Check username pehle se toh nahi hai
             if User.objects.filter(username=data['username']).exists():
                 return Response({"error": "Username Already Exists."}, status=status.HTTP_400_BAD_REQUEST)
                 
-            # Naya user create karein
             user = User.objects.create(
                 username=data['username'],
                 email=data.get('email', ''),
-                password=make_password(data['password']) # Password hashing 
+                password=make_password(data['password'])
             )
             return Response({"message": "Signup completed! You can now login."}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({"error": "details missing ."}, status=status.HTTP_400_BAD_REQUEST)
-        
+
 class BookCarAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -194,7 +191,7 @@ class BookCarAPIView(APIView):
                 )
                 return Response({"message": "Car successfully booked!", "distance_km": distance, "total_price": str(total_price)}, status=status.HTTP_201_CREATED)
 
-            else:  # DATE_RANGE — existing logic
+            else:  # DATE_RANGE
                 start_date_str = data.get('start_date')
                 end_date_str = data.get('end_date')
                 start_point = data.get('start_point', '')
@@ -225,14 +222,15 @@ class BookCarAPIView(APIView):
                     status="BOOKED"
                 )
                 return Response({"message": "Car successfully booked!"}, status=status.HTTP_201_CREATED)
+
 class BookedCarsListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        # Sirf current logged in user ki bookings dikhayega
         user_bookings = BookedCar.objects.filter(user=request.user).exclude(status="COMPLETED").order_by('-created_at')
         serializer = BookedCarSerializer(user_bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
     def delete(self, request, booking_id=None):
         try:
             booking = BookedCar.objects.get(id=booking_id, user=request.user)
@@ -242,7 +240,7 @@ class BookedCarsListAPIView(APIView):
             return Response({"message": "Booking successfully removed!"}, status=status.HTTP_200_OK)
         except BookedCar.DoesNotExist:
             return Response({"error": "Booking not found "}, status=status.HTTP_404_NOT_FOUND)
-        
+
 class UserProfileAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -274,8 +272,8 @@ class UserProfileAPIView(APIView):
         profile.save()
 
         return Response({"message": "Profile updated successfully!"}, status=status.HTTP_200_OK)
+
 class OwnerCarsAPIView(APIView):
-    """Cars this user owns, with current booking/driver/customer/price info."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -309,10 +307,10 @@ class OwnerCarsAPIView(APIView):
             })
 
         return Response(data, status=status.HTTP_200_OK)
-class LiveLocationAPIView(APIView):
-    permission_classes = [AllowAny]  # Unauthenticated phone request allow karne ke liye
 
-    # Specific car ki current live location get karna
+class LiveLocationAPIView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, car_id):
         try:
             car = Car.objects.get(id=car_id)
@@ -325,12 +323,9 @@ class LiveLocationAPIView(APIView):
         except Car.DoesNotExist:
             return Response({"error": "Car nahi mili."}, status=status.HTTP_404_NOT_FOUND)
 
-    # Coordinates update karna (Driver App ya GPS Device se)
     def post(self, request, car_id):
         try:
             car = Car.objects.get(id=car_id)
-            
-            # Request body validation
             lat = request.data.get('latitude')
             lng = request.data.get('longitude')
             
@@ -345,9 +340,7 @@ class LiveLocationAPIView(APIView):
         except Car.DoesNotExist:
             return Response({"error": "Car not found."}, status=status.HTTP_404_NOT_FOUND)
 
-
 class AvailableBookingsAPIView(APIView):
-    """Bookings no driver has claimed yet — shown on Driver Dashboard."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -359,9 +352,7 @@ class AvailableBookingsAPIView(APIView):
         serializer = BookedCarSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 class AcceptBookingAPIView(APIView):
-    """Driver claims a booking. Atomic so two drivers can't grab the same one."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_id):
@@ -388,7 +379,6 @@ class AcceptBookingAPIView(APIView):
             }, status=status.HTTP_200_OK)
 
 class CancelDriverAssignmentAPIView(APIView):
-    """Driver un-assigns themselves from a booking — it goes back to the available pool."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_id):
@@ -403,7 +393,6 @@ class CancelDriverAssignmentAPIView(APIView):
         return Response({"message": "You have been unassigned. Booking is back in the available pool."}, status=status.HTTP_200_OK)
 
 class MyDriverBookingsAPIView(APIView):
-    """Bookings this driver has accepted — used to auto-start location sharing."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -411,9 +400,7 @@ class MyDriverBookingsAPIView(APIView):
         serializer = BookedCarSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 class ToggleDriverStatusAPIView(APIView):
-    """Lets a user opt in/out of being a driver (simple checkbox on Profile page)."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -430,9 +417,8 @@ class ToggleOwnerStatusAPIView(APIView):
         profile.is_owner = not profile.is_owner
         profile.save(update_fields=['is_owner'])
         return Response({"is_owner": profile.is_owner}, status=status.HTTP_200_OK)
-    
+
 class CompleteTripAPIView(APIView):
-    """Driver marks the trip as done — booking moves to PENDING_PAYMENT."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_id):
@@ -444,8 +430,8 @@ class CompleteTripAPIView(APIView):
         booking.status = "AWAITING_CONFIRMATION"
         booking.save(update_fields=['status'])
         return Response({"message": "Trip marked complete. Waiting for customer payment."}, status=status.HTTP_200_OK)
+
 class ConfirmTripCompletionAPIView(APIView):
-    """Customer confirms the trip actually ended, or disputes it."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_id):
@@ -464,21 +450,11 @@ class ConfirmTripCompletionAPIView(APIView):
             booking.save(update_fields=['status'])
             return Response({"message": "Trip confirmed! Proceed to payment."}, status=status.HTTP_200_OK)
         else:
-            booking.status = "ACTIVE"   # sends it back to driver as still ongoing
+            booking.status = "ACTIVE"
             booking.save(update_fields=['status'])
             return Response({"message": "Marked as still in progress. Driver notified."}, status=status.HTTP_200_OK)
-def create_superuser_once(request):
-    if User.objects.filter(username='admin').exists():
-        return HttpResponse("Superuser already exists.")
-    
-    User.objects.create_superuser(
-        username='Theguy',
-        email='Theguy@rentride.com',
-        password='Theguy75@unique'
-    )
-    return HttpResponse("Superuser created successfully!")
+
 class ConfirmPaymentAPIView(APIView):
-    """Customer confirms payment on the mock screen — booking is fully closed."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, booking_id):
@@ -502,7 +478,6 @@ class CustomerBookingHistoryAPIView(APIView):
         serializer = BookedCarSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 class DriverBookingHistoryAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -511,7 +486,6 @@ class DriverBookingHistoryAPIView(APIView):
         serializer = BookedCarSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 class OwnerBookingHistoryAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -519,6 +493,7 @@ class OwnerBookingHistoryAPIView(APIView):
         bookings = BookedCar.objects.filter(car__owner=request.user, status="COMPLETED").order_by('-created_at')
         serializer = BookedCarSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 class DriverEarningsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -545,7 +520,6 @@ class DriverEarningsAPIView(APIView):
             "total_trips": completed.count(),
             "trips": trips
         }, status=status.HTTP_200_OK)
-
 
 class OwnerEarningsAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -575,7 +549,6 @@ class OwnerEarningsAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 class ToggleCarAvailabilityAPIView(APIView):
-    """Owner manually marks their own car as unavailable/available for rent."""
     permission_classes = [IsAuthenticated]
 
     def post(self, request, car_id):
