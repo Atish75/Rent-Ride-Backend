@@ -16,10 +16,13 @@ from datetime import datetime
 from decimal import Decimal
 import math
 
+<<<<<<< HEAD
 from .models import Car, BookedCar, Profile
 from .serializers import CarSerializer, BookedCarSerializer
 
 # --- HELPER FUNCTIONS ---
+=======
+>>>>>>> 9e898ac (Add CSRF trusted origins for Render domain)
 def haversine_km(lat1, lon1, lat2, lon2):
     R = 6371  # Earth's radius in km
     dlat = math.radians(lat2 - lat1)
@@ -39,7 +42,10 @@ def create_superuser_once(request):
         password='Theguy75@unique'
     )
     return HttpResponse("Superuser created successfully!")
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9e898ac (Add CSRF trusted origins for Render domain)
 COMPANY_SHARE = Decimal("0.08")
 DRIVER_SHARE = Decimal("0.25")
 OWNER_SHARE = Decimal("0.67")

@@ -151,7 +151,7 @@ REST_FRAMEWORK = {
     )
 }
 
-
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
