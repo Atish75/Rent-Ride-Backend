@@ -17,6 +17,7 @@ class BookedCarSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookedCar
         fields = "__all__"
+        read_only_fields = ['otp']  
         extra_kwargs = {
             "customer_name": {"required": True},
             "customer_email": {"required": False},

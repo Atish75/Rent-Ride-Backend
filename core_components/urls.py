@@ -11,7 +11,7 @@ from .views import (
     ToggleDriverStatusAPIView,CancelDriverAssignmentAPIView,OwnerCarsAPIView,CompleteTripAPIView,
     ConfirmPaymentAPIView,CustomerBookingHistoryAPIView,DriverBookingHistoryAPIView,
     OwnerBookingHistoryAPIView,DriverEarningsAPIView,OwnerEarningsAPIView,ToggleOwnerStatusAPIView,ConfirmTripCompletionAPIView,
-    ToggleCarAvailabilityAPIView,
+    ToggleCarAvailabilityAPIView,StartRideAPIView,
 )
 from .views import create_superuser_once
 router = DefaultRouter()
@@ -41,6 +41,7 @@ urlpatterns = [
     path('booked-cars/<int:booking_id>/confirm-trip/', ConfirmTripCompletionAPIView.as_view(), name='confirm_trip'),
     path('owner/cars/<int:car_id>/toggle-availability/', ToggleCarAvailabilityAPIView.as_view(), name='toggle_car_availability'),
     path('create-superuser-once/', create_superuser_once, name='create_superuser_once'),
+    path('driver/bookings/<int:booking_id>/start-ride/', StartRideAPIView.as_view(), name='start_ride'),
 
     # Router endpoints
     path('', include(router.urls)),

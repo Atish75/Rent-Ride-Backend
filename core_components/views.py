@@ -349,7 +349,7 @@ class AvailableBookingsAPIView(APIView):
         bookings = BookedCar.objects.filter(driver__isnull=True, status="BOOKED").order_by('-created_at')
         serializer = BookedCarSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
+import random
 class AcceptBookingAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -366,9 +366,13 @@ class AcceptBookingAPIView(APIView):
 
             if booking.driver is not None:
                 return Response({"error": "Booking already accepted by another driver."}, status=status.HTTP_400_BAD_REQUEST)
+            otp = str(random.randint(1000, 9999))
 
             booking.driver = request.user
-            booking.save(update_fields=['driver'])
+            booking.otp = otp
+            booking.status = "ACTIVE"   # 👈 new — booking is now "assigned, awaiting ride start"
+            booking.save(update_fields=['driver', 'otp', 'status'])
+            #booking.save(update_fields=['driver'])
 
             return Response({
                 "message": "Booking accepted!",
@@ -376,6 +380,24 @@ class AcceptBookingAPIView(APIView):
                 "booking_id": booking.id
             }, status=status.HTTP_200_OK)
 
+class StartRideAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, booking_id):
+        try:
+            booking = BookedCar.objects.get(id=booking_id, driver=request.user)
+        except BookedCar.DoesNotExist:
+            return Response({"error": "Booking not found or not assigned to you."}, status=status.HTTP_404_NOT_FOUND)
+
+        entered_otp = request.data.get('otp')
+
+        if booking.otp != entered_otp:
+            return Response({"error": "Invalid OTP. Please check with the customer."}, status=status.HTTP_400_BAD_REQUEST)
+
+        booking.status = "RIDE_STARTED"
+        booking.save(update_fields=['status'])
+        return Response({"message": "OTP verified! Ride started."}, status=status.HTTP_200_OK)
+    
 class CancelDriverAssignmentAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -394,7 +416,7 @@ class MyDriverBookingsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        bookings = BookedCar.objects.filter(driver=request.user, status__in=["BOOKED", "ACTIVE"]).order_by('-created_at')
+        bookings = BookedCar.objects.filter(driver=request.user, status__in=["ACTIVE", "RIDE_STARTED"]).order_by('-created_at')
         serializer = BookedCarSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

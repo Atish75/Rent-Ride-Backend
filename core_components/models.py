@@ -57,6 +57,7 @@ class BookedCar(models.Model):
     end_date = models.DateField(blank=True, null=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
     status = models.CharField(max_length=30, default="BOOKED")
+    otp = models.CharField(max_length=6, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     driver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='driving_bookings') 
 
