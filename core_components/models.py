@@ -24,9 +24,14 @@ class Car(models.Model):
     available = models.BooleanField(default=True)        # Availability status
     latitude = models.FloatField(default=22.6139)   # Default Delhi Lat
     longitude = models.FloatField(default=88.2090)  # Default Delhi Lng
+    rc_document = CloudinaryField('image', folder='rent_ride_project/documents/rc', blank=True, null=True)
+    insurance_document = CloudinaryField('image', folder='rent_ride_project/documents/insurance', blank=True, null=True)
+    puc_document = CloudinaryField('image', folder='rent_ride_project/documents/puc', blank=True, null=True)
+
 
     def __str__(self):
         return f"{self.brand} {self.name} ({self.model_year})"
+    
 
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
@@ -73,5 +78,13 @@ class Profile(models.Model):
     phone = models.CharField(max_length=10, blank=True, null=True)
     is_driver = models.BooleanField(default=False)  
     is_owner = models.BooleanField(default=False)
+
+     # Driver documents
+    driver_photo = CloudinaryField('image', folder='rent_ride_project/documents/driver_photos', blank=True, null=True)
+    driver_license = CloudinaryField('image', folder='rent_ride_project/documents/licenses', blank=True, null=True)
+
+    # Owner documents
+    owner_photo = CloudinaryField('image', folder='rent_ride_project/documents/owner_photos', blank=True, null=True)
+   
     def __str__(self):
         return f"{self.user.username}'s Profile"

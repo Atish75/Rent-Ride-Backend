@@ -88,6 +88,41 @@ class CarViewSet(viewsets.ModelViewSet):
                 cloudinary.uploader.destroy(public_id)
         car.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    def update(self, request, *args, **kwargs):
+        car = self.get_object()
+        if car.owner != request.user:
+            return Response({"error": "You can only edit cars you own."}, status=status.HTTP_403_FORBIDDEN)
+
+        for field_name in ['rc_document', 'insurance_document', 'puc_document', 'image']:
+            new_file = request.FILES.get(field_name)
+            if new_file:
+                replace_cloudinary_field(car, field_name, new_file)
+
+        car.save()
+        serializer = self.get_serializer(car, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"])
+    def delete_document(self, request, pk=None):
+        car = self.get_object()
+        if car.owner != request.user:
+            return Response({"error": "You can only edit cars you own."}, status=status.HTTP_403_FORBIDDEN)
+
+        field_name = request.data.get('field_name')
+        if field_name not in ['rc_document', 'insurance_document', 'puc_document']:
+            return Response({"error": "Invalid document field."}, status=status.HTTP_400_BAD_REQUEST)
+
+        old_file = getattr(car, field_name)
+        if old_file:
+            public_id = old_file.public_id if hasattr(old_file, "public_id") else None
+            if public_id:
+                cloudinary.uploader.destroy(public_id)
+            setattr(car, field_name, None)
+            car.save()
+
+        return Response({"message": f"{field_name} deleted."}, status=status.HTTP_200_OK)
 
 class BookedCarViewSet(viewsets.ModelViewSet):
     queryset = BookedCar.objects.all()
@@ -254,6 +289,9 @@ class UserProfileAPIView(APIView):
             "phone": profile.phone or '',
             "is_driver": profile.is_driver,
             "is_owner": profile.is_owner,
+            "driver_photo": profile.driver_photo.url if profile.driver_photo else None,
+            "driver_license": profile.driver_license.url if profile.driver_license else None,
+            "owner_photo": profile.owner_photo.url if profile.owner_photo else None,
         }, status=status.HTTP_200_OK)
 
     def put(self, request):
@@ -290,6 +328,9 @@ class OwnerCarsAPIView(APIView):
                 "latitude": car.latitude,
                 "longitude": car.longitude,
                 "image": car.image.url if car.image else None,
+                "rc_document": car.rc_document.url if car.rc_document else None,       
+                "insurance_document": car.insurance_document.url if car.insurance_document else None,  
+                "puc_document": car.puc_document.url if car.puc_document else None,  
                 "booking": None if not booking else {
                     "id": booking.id,
                     "customer_name": booking.customer_name,
@@ -305,7 +346,91 @@ class OwnerCarsAPIView(APIView):
             })
 
         return Response(data, status=status.HTTP_200_OK)
+    import cloudinary.uploader
 
+def replace_cloudinary_field(instance, field_name, new_file):
+    """Deletes the old Cloudinary image for a field before assigning a new one."""
+    old_file = getattr(instance, field_name)
+    if old_file:
+        public_id = old_file.public_id if hasattr(old_file, "public_id") else None
+        if public_id:
+            cloudinary.uploader.destroy(public_id)
+    setattr(instance, field_name, new_file)
+
+class UploadDriverDocumentsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+
+        photo = request.FILES.get('driver_photo')
+        license_doc = request.FILES.get('driver_license')
+
+        if photo:
+            replace_cloudinary_field(profile, 'driver_photo', photo)
+        if license_doc:
+            replace_cloudinary_field(profile, 'driver_license', license_doc)
+        profile.save()
+
+        return Response({
+            "message": "Driver documents uploaded.",
+            "driver_photo": profile.driver_photo.url if profile.driver_photo else None,
+            "driver_license": profile.driver_license.url if profile.driver_license else None,
+        }, status=status.HTTP_200_OK)
+
+class UploadOwnerDocumentsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+
+        photo = request.FILES.get('owner_photo')
+        if photo:
+            replace_cloudinary_field(profile, 'owner_photo', photo)
+        profile.save()
+
+        return Response({
+            "message": "Owner photo uploaded.",
+            "owner_photo": profile.owner_photo.url if profile.owner_photo else None,
+        }, status=status.HTTP_200_OK)
+
+class DeleteDriverDocumentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, field_name):
+        if field_name not in ['driver_photo', 'driver_license']:
+            return Response({"error": "Invalid document field."}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        old_file = getattr(profile, field_name)
+        if old_file:
+            public_id = old_file.public_id if hasattr(old_file, "public_id") else None
+            if public_id:
+                cloudinary.uploader.destroy(public_id)
+            setattr(profile, field_name, None)
+            profile.save()
+
+        return Response({"message": f"{field_name} deleted."}, status=status.HTTP_200_OK)
+
+
+class DeleteOwnerDocumentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, field_name):
+        if field_name != 'owner_photo':
+            return Response({"error": "Invalid document field."}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        old_file = getattr(profile, field_name)
+        if old_file:
+            public_id = old_file.public_id if hasattr(old_file, "public_id") else None
+            if public_id:
+                cloudinary.uploader.destroy(public_id)
+            setattr(profile, field_name, None)
+            profile.save()
+
+        return Response({"message": "Owner photo deleted."}, status=status.HTTP_200_OK)
+    
 class LiveLocationAPIView(APIView):
     permission_classes = [AllowAny]
 
@@ -346,7 +471,11 @@ class AvailableBookingsAPIView(APIView):
         if not profile.is_driver:
             return Response({"error": "Not a registered driver."}, status=status.HTTP_403_FORBIDDEN)
 
-        bookings = BookedCar.objects.filter(driver__isnull=True, status="BOOKED").order_by('-created_at')
+        bookings = BookedCar.objects.filter(
+            driver__isnull=True,
+            status="BOOKED"
+        ).exclude(user=request.user).order_by('-created_at')  
+
         serializer = BookedCarSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 import random
@@ -364,22 +493,24 @@ class AcceptBookingAPIView(APIView):
             except BookedCar.DoesNotExist:
                 return Response({"error": "Booking not found."}, status=status.HTTP_404_NOT_FOUND)
 
+            if booking.user == request.user:   # 👈 new check
+                return Response({"error": "You can't drive your own booking."}, status=status.HTTP_400_BAD_REQUEST)
+
             if booking.driver is not None:
                 return Response({"error": "Booking already accepted by another driver."}, status=status.HTTP_400_BAD_REQUEST)
+
             otp = str(random.randint(1000, 9999))
 
             booking.driver = request.user
             booking.otp = otp
-            booking.status = "ACTIVE"   # 👈 new — booking is now "assigned, awaiting ride start"
+            booking.status = "ACTIVE"
             booking.save(update_fields=['driver', 'otp', 'status'])
-            #booking.save(update_fields=['driver'])
 
             return Response({
                 "message": "Booking accepted!",
                 "car_id": booking.car.id,
                 "booking_id": booking.id
             }, status=status.HTTP_200_OK)
-
 class StartRideAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -407,11 +538,15 @@ class CancelDriverAssignmentAPIView(APIView):
         except BookedCar.DoesNotExist:
             return Response({"error": "Booking not found or not assigned to you."}, status=status.HTTP_404_NOT_FOUND)
 
+        if booking.status == "RIDE_STARTED":
+            return Response({"error": "Can't cancel — ride has already started. Use Complete Trip instead."}, status=status.HTTP_400_BAD_REQUEST)
+
         booking.driver = None
-        booking.save(update_fields=['driver'])
+        booking.otp = None           
+        booking.status = "BOOKED"     
+        booking.save(update_fields=['driver', 'otp', 'status'])
 
         return Response({"message": "You have been unassigned. Booking is back in the available pool."}, status=status.HTTP_200_OK)
-
 class MyDriverBookingsAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -425,6 +560,12 @@ class ToggleDriverStatusAPIView(APIView):
 
     def post(self, request):
         profile, _ = Profile.objects.get_or_create(user=request.user)
+        if not profile.is_driver:
+            if not profile.driver_photo or not profile.driver_license:
+                return Response(
+                    {"error": "Please upload your photo and license before enabling Driver mode."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         profile.is_driver = not profile.is_driver
         profile.save(update_fields=['is_driver'])
         return Response({"is_driver": profile.is_driver}, status=status.HTTP_200_OK)
@@ -434,9 +575,18 @@ class ToggleOwnerStatusAPIView(APIView):
 
     def post(self, request):
         profile, _ = Profile.objects.get_or_create(user=request.user)
+
+        if not profile.is_owner:
+            if not profile.owner_photo:
+                return Response(
+                    {"error": "Please upload your photo before enabling Owner mode."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         profile.is_owner = not profile.is_owner
         profile.save(update_fields=['is_owner'])
         return Response({"is_owner": profile.is_owner}, status=status.HTTP_200_OK)
+
 
 class CompleteTripAPIView(APIView):
     permission_classes = [IsAuthenticated]

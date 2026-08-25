@@ -11,7 +11,8 @@ from .views import (
     ToggleDriverStatusAPIView,CancelDriverAssignmentAPIView,OwnerCarsAPIView,CompleteTripAPIView,
     ConfirmPaymentAPIView,CustomerBookingHistoryAPIView,DriverBookingHistoryAPIView,
     OwnerBookingHistoryAPIView,DriverEarningsAPIView,OwnerEarningsAPIView,ToggleOwnerStatusAPIView,ConfirmTripCompletionAPIView,
-    ToggleCarAvailabilityAPIView,StartRideAPIView,
+    ToggleCarAvailabilityAPIView,StartRideAPIView,UploadDriverDocumentsAPIView, UploadOwnerDocumentsAPIView,DeleteDriverDocumentAPIView,
+      DeleteOwnerDocumentAPIView,
 )
 from .views import create_superuser_once
 router = DefaultRouter()
@@ -42,7 +43,11 @@ urlpatterns = [
     path('owner/cars/<int:car_id>/toggle-availability/', ToggleCarAvailabilityAPIView.as_view(), name='toggle_car_availability'),
     path('create-superuser-once/', create_superuser_once, name='create_superuser_once'),
     path('driver/bookings/<int:booking_id>/start-ride/', StartRideAPIView.as_view(), name='start_ride'),
-
+    path('profile/upload-driver-docs/', UploadDriverDocumentsAPIView.as_view(), name='upload_driver_docs'),
+    path('profile/upload-owner-docs/', UploadOwnerDocumentsAPIView.as_view(), name='upload_owner_docs'),
+    path('profile/delete-driver-doc/<str:field_name>/', DeleteDriverDocumentAPIView.as_view(), name='delete_driver_doc'),
+    path('profile/delete-owner-doc/<str:field_name>/', DeleteOwnerDocumentAPIView.as_view(), name='delete_owner_doc'),
+    
     # Router endpoints
     path('', include(router.urls)),
 
