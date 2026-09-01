@@ -41,4 +41,4 @@ The core RESTful API backend for **Rent Ride**, an end-to-end car rental platfor
  │ PostgreSQL / │    │    Cloudinary API  │
  │     MySQL    │    │    (Media Assets)  │
  └──────────────┘   └─────────────────┘
->>>>>>> 494d5bc531ff9d3cd43f598587df592933b22d70
+
