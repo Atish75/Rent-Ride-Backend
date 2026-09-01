@@ -151,7 +151,7 @@ REST_FRAMEWORK = {
     )
 }
 
-#CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')          # git push ke time hata lena h !!!!!!!! 
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')          # git push ke time hata lena h !!!!!!!! 
 
 
 SIMPLE_JWT = {
