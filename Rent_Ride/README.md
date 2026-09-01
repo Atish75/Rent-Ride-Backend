@@ -1,6 +1,4 @@
-# Rent-Ride
-
-# Rent Ride — Backend API Services
+# 🚗 Rent Ride — Backend API Services
 
 [![Python](https://img.shields.io/badge/Python-3.13+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-6.0+-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
@@ -41,4 +39,3 @@ The core RESTful API backend for **Rent Ride**, an end-to-end car rental platfor
  │ PostgreSQL / │    │    Cloudinary API  │
  │     MySQL    │    │    (Media Assets)  │
  └──────────────┘   └─────────────────┘
-
