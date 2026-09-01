@@ -3,7 +3,7 @@ from django.db import transaction
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from django.http import HttpResponse
-
+import os
 import cloudinary
 import cloudinary.uploader
 from rest_framework import viewsets, status, filters, permissions
@@ -29,13 +29,16 @@ def haversine_km(lat1, lon1, lat2, lon2):
 
 # One-time superuser creator for Render
 def create_superuser_once(request):
+    if request.GET.get('key') != os.environ.get('SETUP_SECRET_KEY'):
+        return HttpResponse("Not authorized", status=403)
+    
     if User.objects.filter(username='Theguy').exists():
         return HttpResponse("Superuser already exists.")
     
     User.objects.create_superuser(
         username='Theguy',
         email='Theguy@rentride.com',
-        password='Theguy75@unique'
+        password=os.environ.get('ADMIN_PASSWORD')
     )
     return HttpResponse("Superuser created successfully!")
 COMPANY_SHARE = Decimal("0.08")
