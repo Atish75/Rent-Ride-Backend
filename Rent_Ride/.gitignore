@@ -1,0 +1,45 @@
+# --- Frontend (Vite/React) ---
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# --- Backend (Python/Django) ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# --- Secrets ---
+.env
+.env.local
+.env.*.local
+*.env

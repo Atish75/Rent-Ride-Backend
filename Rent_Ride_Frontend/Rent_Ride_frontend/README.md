@@ -1,16 +1,36 @@
-# React + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# 🚗 Rent Ride — Frontend Web Application
 
-Currently, two official plugins are available:
+[![React](https://img.shields.io/badge/React-18.0+-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![React Router](https://img.shields.io/badge/React_Router-v6-CA4245?style=for-the-badge&logo=react-router&logoColor=white)](https://reactrouter.com/)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+[![Vite](https://img.shields.io/badge/Vite-5.0+-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Deployed on Vercel](https://img.shields.io/badge/Vercel-Hosted-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The modern Single Page Application (SPA) frontend for **Rent Ride**, an intuitive car rental and real-time vehicle booking system. Built using **React** and **Vite**, this application provides a responsive UI, JWT-based session persistence, real-time vehicle filtering, deferred payment checkout modals, and live vehicle GPS tracking interfaces.
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🌟 Key Features
 
-## Expanding the ESLint configuration
+* **Dynamic Vehicle Discovery & Filtering:** Real-time client-side search across car models, brands, fuel types, and transmission modes.
+* **Book First, Pay Later Workflow:** Interactive date-selection flow creating instant booking states with a deferred payment mechanism.
+* **Custom Interactive Payment Modal:** Form-based UPI and Card checkout simulation generating verified transaction records and updating real-time backend state.
+* **JWT Auth Persistence & Context:** Centralized `AuthContext` handling JWT token management, session retention across page reloads, and protected route access.
+* **Role-Based Dynamic Routing:** Conditional navigation tailored for standard customers versus driver user profiles (`/role-select`).
+* **Live GPS Tracking Interface:** Dedicated view querying real-time vehicle latitude/longitude coordinates.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 🏗 System Architecture
+
+```text
+       ┌────────────────────────┐
+       │   React.js Frontend    │ (Hosted on Vercel)
+       └───────────┬────────────┘
+                   │
+                   │ REST APIs / HTTPS (Bearer Token Auth)
+                   ▼
+       ┌────────────────────────┐
+       │  Django REST Framework │ (Hosted on Render)
+       └────────────────────────┘

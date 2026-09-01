@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from './config';
 
 export default function DriverDashboard() {
   const [available, setAvailable] = useState([]);
   const [myBookings, setMyBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [otpInputs, setOtpInputs] = useState({});
   const navigate = useNavigate();
   const token = localStorage.getItem('access_token');
   const gpsIntervalsRef = useRef({}); // track active GPS intervals per carId
@@ -17,8 +19,8 @@ export default function DriverDashboard() {
   const fetchAll = async () => {
     try {
       const [availRes, mineRes] = await Promise.all([
-        fetch("http://127.0.0.1:8000/driver/available-bookings/", { headers: authHeaders }),
-        fetch("http://127.0.0.1:8000/driver/my-bookings/", { headers: authHeaders }),
+        fetch(`${API_BASE_URL}/driver/available-bookings/`, { headers: authHeaders }),
+        fetch(`${API_BASE_URL}/driver/my-bookings/`, { headers: authHeaders }),
       ]);
 
       if (availRes.status === 403 || mineRes.status === 403) {
@@ -44,7 +46,7 @@ export default function DriverDashboard() {
 
   const handleAccept = async (bookingId) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/driver/bookings/${bookingId}/accept/`, {
+      const res = await fetch(`${API_BASE_URL}/driver/bookings/${bookingId}/accept/`, {
         method: "POST",
         headers: authHeaders,
       });
@@ -59,153 +61,376 @@ export default function DriverDashboard() {
       console.error("Accept error:", err);
     }
   };
+
   const handleCancelAssignment = async (bookingId) => {
-  if (!window.confirm("Cancel this ride? It will go back to the available pool for other drivers.")) return;
+    if (!window.confirm("Cancel this ride? It will go back to the available pool for other drivers.")) return;
 
-  try {
-    const res = await fetch(`http://127.0.0.1:8000/driver/bookings/${bookingId}/cancel/`, {
-      method: "POST",
-      headers: authHeaders,
-    });
-    const data = await res.json();
-    if (res.ok) {
-      alert(data.message);
-      fetchAll(); // refresh both lists — moves it back to Available Bookings
-    } else {
-      alert(data.error || "Could not cancel.");
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/bookings/${bookingId}/cancel/`, {
+        method: "POST",
+        headers: authHeaders,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        fetchAll();
+      } else {
+        alert(data.error || "Could not cancel.");
+      }
+    } catch (err) {
+      console.error("Cancel error:", err);
     }
-  } catch (err) {
-    console.error("Cancel error:", err);
-  }
-};
+  };
 
-  //  Auto-start GPS broadcasting for every car this driver is assigned to
+  // Auto-start GPS broadcasting for every car this driver is assigned to
   useEffect(() => {
     myBookings.forEach((booking) => {
       const carId = booking.car.id;
-      if (gpsIntervalsRef.current[carId]) return; // already broadcasting for this car
+      if (gpsIntervalsRef.current[carId]) return;
 
-      const sendLocation = () => {
-        if (!navigator.geolocation) return;
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            const { latitude, longitude } = pos.coords;
-            try {
-              await fetch(`http://127.0.0.1:8000/cars/${carId}/location/`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ latitude, longitude }),
-              });
-            } catch (err) {
-              console.error(`Failed to send location for car ${carId}:`, err);
-            }
-          },
-          (err) => console.warn(`GPS error for car ${carId}:`, err.message),
-          { enableHighAccuracy: true, timeout: 5000, maximumAge: 2000 }
-        );
+      const wsProtocol = API_BASE_URL.startsWith('https') ? 'wss' : 'ws';
+      const wsUrl = `${wsProtocol}://${API_BASE_URL.replace(/^https?:\/\//, '')}/ws/location/${carId}/`;
+      const socket = new WebSocket(wsUrl);
+
+      socket.onopen = () => {
+        const sendLocation = () => {
+          if (!navigator.geolocation) return;
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              socket.send(JSON.stringify({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude
+              }));
+            },
+            (err) => console.warn(`GPS error for car ${carId}:`, err.message),
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 2000 }
+          );
+        };
+
+        sendLocation();
+        gpsIntervalsRef.current[carId] = { interval: setInterval(sendLocation, 4000), socket };
       };
-
-      sendLocation(); // send immediately
-      gpsIntervalsRef.current[carId] = setInterval(sendLocation, 4000);
     });
 
-    // cleanup: stop broadcasting for cars no longer in myBookings
     return () => {
       Object.keys(gpsIntervalsRef.current).forEach((carId) => {
         const stillActive = myBookings.some((b) => String(b.car.id) === carId);
         if (!stillActive) {
-          clearInterval(gpsIntervalsRef.current[carId]);
+          clearInterval(gpsIntervalsRef.current[carId].interval);
+          gpsIntervalsRef.current[carId].socket.close();
           delete gpsIntervalsRef.current[carId];
         }
       });
     };
   }, [myBookings]);
 
-  if (loading) return <p style={{ textAlign: "center", marginTop: "3rem" }}>Loading driver dashboard...</p>;
-const handleCompleteTrip = async (bookingId) => {
-  if (!window.confirm("Mark this trip as completed? Customer will be asked to pay.")) return;
+  const handleCompleteTrip = async (bookingId) => {
+    if (!window.confirm("Mark this trip as completed? Customer will be asked to pay.")) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/driver/bookings/${bookingId}/complete/`, {
+        method: "POST",
+        headers: authHeaders,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        fetchAll();
+      } else {
+        alert(data.error || "Could not complete trip.");
+      }
+    } catch (err) {
+      console.error("Complete trip error:", err);
+    }
+  };
+
+  if (loading) return (
+    <div style={{ 
+      backgroundColor: "#F8FAFC", 
+      minHeight: "100vh", 
+      display: "flex", 
+      justifyContent: "center", 
+      alignItems: "center",
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+      color: "#64748B"
+    }}>
+      <p style={{ fontWeight: "300" }}>Loading driver dashboard...</p>
+    </div>
+  );
+
+
+const handleStartRide = async (bookingId) => {
+  const otp = otpInputs[bookingId];
+  if (!otp) {
+    alert("Please enter the OTP the customer gave you.");
+    return;
+  }
 
   try {
-    const res = await fetch(`http://127.0.0.1:8000/driver/bookings/${bookingId}/complete/`, {
+    const res = await fetch(`${API_BASE_URL}/driver/bookings/${bookingId}/start-ride/`, {
       method: "POST",
       headers: authHeaders,
+      body: JSON.stringify({ otp })
     });
     const data = await res.json();
     if (res.ok) {
       alert(data.message);
-      fetchAll(); // this booking will now drop out of myBookings once status != BOOKED/ACTIVE, GPS auto-stops
+      fetchAll();
     } else {
-      alert(data.error || "Could not complete trip.");
+      alert(data.error || "Could not start ride.");
     }
   } catch (err) {
-    console.error("Complete trip error:", err);
+    console.error("Start ride error:", err);
   }
 };
   return (
-    <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "1rem", fontFamily: "Arial, sans-serif" }}>
-      <h2>🚕 Driver Dashboard</h2>
-        <button onClick={() => navigate("/driver-history")} style={{ marginBottom: "1rem", padding: "0.5rem 1rem", backgroundColor: "#6f42c1", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "bold" }}>
-          📜 View Completed Rides
-        </button>
-        <button onClick={() => navigate("/driver-earnings")} style={{ marginBottom: "1rem", marginLeft: "0.5rem", padding: "0.5rem 1rem", backgroundColor: "#28a745", color: "#fff", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "bold" }}>
-        💰 My Earnings
-        </button>
-      <h3 style={{ marginTop: "2rem" }}>📋 Available Bookings</h3>
-      {available.length === 0 ? (
-        <p style={{ color: "#888" }}>No pending bookings right now.</p>
-      ) : (
-        available.map((b) => (
-          <div key={b.id} style={{ border: "1px solid #ddd", borderRadius: "8px", padding: "1rem", marginBottom: "0.8rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-                <strong>{b.car.name}</strong> — {b.customer_name}<br />
-                  <span style={{ color: "#666", fontSize: "0.9rem" }}>{b.start_date} → {b.end_date}</span><br />
-                  {b.start_point && b.end_point && (
-                  <span style={{ color: "#495057", fontSize: "0.9rem" }}>
-                 <strong>{b.start_point}</strong> → <strong>{b.end_point}</strong>
-                  </span>)}
-                 <span style={{ color: "#28a745", fontWeight: "bold" }}> - ₹{b.total_price}</span>
-            </div>
-            <button
-              onClick={() => handleAccept(b.id)}
-              style={{ padding: "0.5rem 1rem", backgroundColor: "#28a745", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
+    <div style={{ 
+      backgroundColor: "#F8FAFC", 
+      minHeight: "100vh", 
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif", 
+      color: "#0F172A",
+      WebkitFontSmoothing: "antialiased",
+      padding: "2rem 1.5rem"
+    }}>
+      <div style={{ maxWidth: "850px", margin: "0 auto" }}>
+        
+        {/* HEADER & TOP BUTTONS */}
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          marginBottom: "2rem",
+          flexWrap: "wrap",
+          gap: "1rem"
+        }}>
+          <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "400", color: "#0F172A", letterSpacing: "-0.5px" }}>
+             Driver Dashboard
+          </h2>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button 
+              onClick={() => navigate("/driver-history")} 
+              style={topButtonStyle("#EEF2FF", "#3730A3", "1px solid #C7D2FE")}
             >
-              ✅ Accept
+              📜 View Completed Rides
             </button>
-            <button
-        onClick={() => handleCancelAssignment(b.id)}
-        style={{ padding: "0.5rem 1rem", backgroundColor: "#dc3545", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
-      >
-        ❌ Cancel
-      </button>
+            <button 
+              onClick={() => navigate("/driver-earnings")} 
+              style={topButtonStyle("#ECFDF5", "#047857", "1px solid #A7F3D0")}
+            >
+              💰 My Earnings
+            </button>
           </div>
-        ))
-      )}
+        </div>
 
-      <h3 style={{ marginTop: "2rem" }}>🚗 My Active Rides (Sharing Live Location)</h3>
-      {myBookings.length === 0 ? (
-  <p style={{ color: "#888" }}>No active rides yet.</p>
-) : (
-  myBookings.map((b) => (
-    <div key={b.id} style={{ border: "1px solid #17a2b8", borderRadius: "8px", padding: "1rem", marginBottom: "0.8rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <div>
-        <strong>{b.car.name}</strong> — {b.customer_name}<br />
-        <span style={{ color: "#17a2b8", fontWeight: "bold" }}>🟢 Broadcasting live location</span>
-      </div>
+        {/* SECTION 1: AVAILABLE BOOKINGS */}
+        <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.2rem", fontWeight: "400", color: "#334155" }}>
+           Available Bookings
+        </h3>
+
+        {available.length === 0 ? (
+          <div style={{ 
+            padding: "2rem", 
+            backgroundColor: "#FFFFFF", 
+            borderRadius: "12px", 
+            border: "1px solid #E2E8F0", 
+            textAlign: "center",
+            marginBottom: "2.5rem"
+          }}>
+            <p style={{ color: "#64748B", margin: 0, fontWeight: "300", fontSize: "0.95rem" }}>
+              No pending bookings right now.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", marginBottom: "2.5rem" }}>
+            {available.map((b) => (
+              <div 
+                key={b.id} 
+                style={{ 
+                  backgroundColor: "#FFFFFF", 
+                  border: "1px solid #E2E8F0", 
+                  borderRadius: "12px", 
+                  padding: "1.25rem", 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
+                }}
+              >
+                <div style={{ flex: 1, minWidth: "240px" }}>
+                  <strong style={{ fontSize: "1.1rem", fontWeight: "400", color: "#0F172A" }}>
+                    {b.car.name}
+                  </strong> 
+                  <span style={{ color: "#475569", fontWeight: "300", fontSize: "0.95rem" }}> — {b.customer_name}</span>
+                  <br />
+
+                  {b.trip_type === 'POINT_TO_POINT' ? (
+                  <span style={{ color: "#475569", fontSize: "0.875rem", fontWeight: "300" }}>
+                   One-way trip{b.distance_km && ` — ${b.distance_km} km`}
+                  </span>
+                  ) : (
+                  <span style={{ color: "#64748B", fontSize: "0.875rem", fontWeight: "300" }}>
+                    {b.start_date} → {b.end_date}
+                  </span>
+                  )}
+                  <br />
+                  {b.start_point && b.end_point && (
+                  <span style={{ color: "#475569", fontSize: "0.875rem", fontWeight: "300" }}>
+                  📍 {b.start_point} → {b.end_point}
+                  </span>
+                  )}
+
+                  <br />
+                  <span style={{ color: "#047857", fontWeight: "500", fontSize: "1rem", marginTop: "0.25rem", display: "inline-block" }}>
+                     ₹{b.total_price}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    onClick={() => handleAccept(b.id)}
+                    style={cardActionStyle("#ECFDF5", "#047857", "1px solid #A7F3D0")}
+                  >
+                    ✅ Accept
+                  </button>
+                  <button
+                    onClick={() => handleCancelAssignment(b.id)}
+                    style={cardActionStyle("#FEF2F2", "#991B1B", "1px solid #FCA5A5")}
+                  >
+                    ❌ Cancel
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* SECTION 2: MY ACTIVE RIDES */}
+        <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.2rem", fontWeight: "400", color: "#334155" }}>
+           My Active Rides (Sharing Live Location)
+        </h3>
+
+        {myBookings.length === 0 ? (
+          <div style={{ 
+            padding: "2rem", 
+            backgroundColor: "#FFFFFF", 
+            borderRadius: "12px", 
+            border: "1px solid #E2E8F0", 
+            textAlign: "center" 
+          }}>
+            <p style={{ color: "#64748B", margin: 0, fontWeight: "300", fontSize: "0.95rem" }}>
+              No active rides yet.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+            {myBookings.map((b) => (
+              <div 
+                key={b.id} 
+                style={{ 
+                  backgroundColor: "#FFFFFF", 
+                  border: "1px solid #BAE6FD", 
+                  borderRadius: "12px", 
+                  padding: "1.25rem", 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "1rem",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.03)"
+                }}
+              >
+                <div style={{ flex: 1, minWidth: "240px" }}>
+                  <strong style={{ fontSize: "1.1rem", fontWeight: "400", color: "#0F172A" }}>
+                    {b.car.name}
+                  </strong> 
+                  <span style={{ color: "#475569", fontWeight: "300", fontSize: "0.95rem" }}> — {b.customer_name}</span><br />
+                  
+                  {b.trip_type === 'POINT_TO_POINT' ? (
+                    <span style={{ color: "#475569", fontSize: "0.875rem", fontWeight: "300" }}>
+                       One-way trip{b.distance_km && ` — ${b.distance_km} km`}
+                    </span>
+                  ) : (
+                    <span style={{ color: "#475569", fontSize: "0.875rem", fontWeight: "300" }}>
+                       {b.start_date} → {b.end_date}
+                    </span>
+                  )}
+                  <br />
+                  <span style={{ color: "#047857", fontWeight: "500", fontSize: "1rem" }}>
+                    💰 ₹{b.total_price}
+                  </span><br />
+                  <span style={{ color: "#0284C7", fontWeight: "400", fontSize: "0.85rem", marginTop: "0.2rem", display: "inline-block" }}>
+                    🟢 Broadcasting live location
+                  </span>
+                </div>
+                    <span style={{ color: "#0284C7", fontWeight: "400", fontSize: "0.85rem", marginTop: "0.2rem", display: "inline-block" }}>
+  {b.status === "ACTIVE" ? "⏳ Waiting for OTP to start ride" : "🟢 Ride in progress — Broadcasting live location"}
+</span>
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+  {b.status === "ACTIVE" ? (
+    <>
+      <input
+        type="text"
+        placeholder="Enter OTP"
+        maxLength={4}
+        value={otpInputs[b.id] || ''}
+        onChange={(e) => setOtpInputs({ ...otpInputs, [b.id]: e.target.value })}
+        style={{ padding: "0.45rem", borderRadius: "6px", border: "1px solid #CBD5E1", width: "100px" }}
+      />
       <button
-    onClick={() => handleCompleteTrip(b.id)}
-    style={{ padding: "0.5rem 1rem", backgroundColor: "#007bff", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
-  >
-    🏁 Complete Trip
-  </button>
-      <button
-        onClick={() => handleCancelAssignment(b.id)}
-        style={{ padding: "0.5rem 1rem", backgroundColor: "#dc3545", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
+        onClick={() => handleStartRide(b.id)}
+        style={cardActionStyle("#EFF6FF", "#1E40AF", "1px solid #BFDBFE")}
       >
-        ❌ Cancel
+        ▶️ Start Ride
       </button>
-    </div>
-  ))
-)}
+    </>
+  ) : (
+    <button
+      onClick={() => handleCompleteTrip(b.id)}
+      style={cardActionStyle("#EFF6FF", "#1E40AF", "1px solid #BFDBFE")}
+    >
+      🏁 Complete Trip
+    </button>
+  )}
+                  <button
+                    onClick={() => handleCancelAssignment(b.id)}
+                    style={cardActionStyle("#FEF2F2", "#991B1B", "1px solid #FCA5A5")}
+                  >
+                    ❌ Cancel
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
+
+// Styling Helpers
+const topButtonStyle = (bgColor, textColor, border = "none") => ({
+  padding: "0.5rem 0.9rem",
+  backgroundColor: bgColor,
+  color: textColor,
+  border: border,
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontSize: "0.85rem",
+  fontWeight: "300",
+  transition: "all 0.2s ease"
+});
+
+const cardActionStyle = (bgColor, textColor, border = "none") => ({
+  padding: "0.45rem 0.85rem",
+  backgroundColor: bgColor,
+  color: textColor,
+  border: border,
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontWeight: "300",
+  fontSize: "0.85rem",
+  whiteSpace: "nowrap"
+});

@@ -182,3 +182,20 @@
     border-right-color: var(--border);
   }
 }
+@media (max-width: 640px) {
+  .navbar-desktop {
+    display: none !important;
+  }
+  .navbar-hamburger {
+    display: block !important;
+  }
+  .navbar-mobile-dropdown {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 641px) {
+  .navbar-mobile-dropdown {
+    display: none !important;
+  }
+}

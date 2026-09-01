@@ -18,6 +18,7 @@ import RoleSelect from './roleselect.jsx';
 import OwnerDashboard from './CarOwner.jsx';
 import BookingHistory from './BookingHistory.jsx';
 import EarningsDashboard from './EarningDashboard.jsx';
+import { API_BASE_URL } from './config';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>

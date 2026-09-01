@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from './config';
 
 export default function TransactionHistory() {
   const [transactions, setTransactions] = useState([]);
@@ -10,7 +11,7 @@ export default function TransactionHistory() {
 
   const fetchTransactions = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/transactions/");
+      const res = await fetch(`${API_BASE_URL}/transactions/`);
       const data = await res.json();
       setTransactions(data);
       setLoading(false);

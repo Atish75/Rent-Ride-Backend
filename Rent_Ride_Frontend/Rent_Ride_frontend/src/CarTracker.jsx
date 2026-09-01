@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // 👈 1. useParams aur useNavigate import karein
+import { useParams, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { API_BASE_URL } from './config';
 
 // Default Marker Icon fix for Leaflet
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -16,7 +17,7 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-//  Map view ko live coordinates par center karne ke liye
+// Map view ko live coordinates par center karne ke liye
 function RecenterMap({ lat, lng }) {
   const map = useMap();
   useEffect(() => {
@@ -26,90 +27,134 @@ function RecenterMap({ lat, lng }) {
 }
 
 export default function CarTracker() {
-  const { carId } = useParams(); //  URL se carId extract karein
+  const { carId } = useParams();
   const navigate = useNavigate();
 
   const [location, setLocation] = useState({ lat: 22.6139, lng: 88.2090, name: "Car Loading..." });
   const [loading, setLoading] = useState(true);
 
-  // Live Location polling (Har 3 seconds me position fetch karega)
+  // Live Location polling
   useEffect(() => {
     if (!carId) return;
 
-    const fetchLocation = async () => {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/cars/${carId}/location/`);
-        if (res.ok) {
-          const data = await res.json();
-          setLocation({
-            lat: Number(data.latitude),
-            lng: Number(data.longitude),
-            name: data.name || "Tracked Car"
-          });
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("Error fetching live location:", err);
-      }
+    const wsProtocol = API_BASE_URL.startsWith('https') ? 'wss' : 'ws';
+    const wsUrl = `${wsProtocol}://${API_BASE_URL.replace(/^https?:\/\//, '')}/ws/location/${carId}/`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => {
+      console.log("Connected to live tracking");
     };
 
-    fetchLocation();
-    const interval = setInterval(fetchLocation, 3000); // ⏱️ Har 3 sec me auto-refresh
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setLocation({
+        lat: Number(data.latitude),
+        lng: Number(data.longitude),
+        name: data.name || "Tracked Car"
+      });
+      setLoading(false);
+    };
 
-    return () => clearInterval(interval);
+    socket.onerror = (err) => {
+      console.error("WebSocket error:", err);
+    };
+
+    return () => socket.close();
   }, [carId]);
 
   return (
-    <div style={{ padding: "1rem", maxWidth: "100%", margin: "0 auto", fontFamily: "Arial, sans-serif" }}>
-      
-      {/* ⬅️ Back Button */}
-      <button 
-        onClick={() => navigate("/booked-cars")}
-        style={{
-          padding: "0.5rem 1rem",
-          backgroundColor: "#6c757d",
-          color: "#fff",
-          border: "none",
-          borderRadius: "6px",
-          cursor: "pointer",
-          marginBottom: "1rem"
-        }}
-      >
-        ⬅️ Back to Bookings
-      </button>
+    <div style={{ 
+      backgroundColor: "#F8FAFC", 
+      minHeight: "100vh", 
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif", 
+      color: "#0F172A",
+      WebkitFontSmoothing: "antialiased",
+      padding: "2rem 1.5rem"
+    }}>
+      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+        
+        {/* HEADER AREA */}
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          marginBottom: "1.5rem",
+          flexWrap: "wrap",
+          gap: "1rem"
+        }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "400", color: "#0F172A", letterSpacing: "-0.5px" }}>
+              📍 Live Tracking: {location.name}
+            </h2>
+            <p style={{ margin: "0.25rem 0 0 0", color: "#64748B", fontSize: "0.875rem", fontWeight: "300" }}>
+              Lat: {location.lat.toFixed(4)} | Lng: {location.lng.toFixed(4)}
+            </p>
+          </div>
 
-      <h2 style={{ textAlign: "center" }}>📍 Live Tracking: {location.name}</h2>
-      <p style={{ textAlign: "center", color: "#666" }}>
-        Lat: {location.lat.toFixed(4)} | Lng: {location.lng.toFixed(4)}
-      </p>
-
-      {/* 🗺️ MAP DISPLAY */}
-      {loading ? (
-        <p style={{ textAlign: "center", marginTop: "2rem" }}>Fetching live GPS signal... 📡</p>
-      ) : (
-        <div style={{ height: "400px", width: "160%", borderRadius: "12px",  boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
-          <MapContainer 
-            center={[location.lat, location.lng]} 
-            zoom={14} 
-            scrollWheelZoom={true} 
-            style={{ height: "150%", width: "200%" }}
+          <button 
+            onClick={() => navigate("/booked-cars")}
+            style={{
+              padding: "0.5rem 0.9rem",
+              backgroundColor: "#F1F5F9",
+              color: "#334155",
+              border: "1px solid #CBD5E1",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              fontWeight: "300",
+              transition: "all 0.2s ease"
+            }}
           >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-
-            {/*  Auto-recenter map view whenever lat/lng changes */}
-            <RecenterMap lat={location.lat} lng={location.lng} />
-
-            <Marker position={[location.lat, location.lng]}>
-              <Popup>
-                🚗 <strong>{location.name}</strong> <br /> Live Position
-              </Popup>
-            </Marker>
-          </MapContainer>
+            ⬅️ Back to Bookings
+          </button>
         </div>
-      )}
+
+        {/* MAP CONTAINER CARD */}
+        <div style={{ 
+          backgroundColor: "#FFFFFF", 
+          borderRadius: "14px", 
+          border: "1px solid #E2E8F0", 
+          padding: "1rem", 
+          boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+        }}>
+          {loading ? (
+            <div style={{ padding: "3rem 1rem", textAlign: "center" }}>
+              <p style={{ color: "#64748B", fontWeight: "300", margin: 0 }}>
+                Fetching live GPS signal... 📡
+              </p>
+            </div>
+          ) : (
+            <div style={{ 
+              height: "450px", 
+              width: "100%", 
+              borderRadius: "10px", 
+              overflow: "hidden",
+              border: "1px solid #E2E8F0"
+            }}>
+              <MapContainer 
+                center={[location.lat, location.lng]} 
+                zoom={14} 
+                scrollWheelZoom={true} 
+                style={{ height: "100%", width: "100%" }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+
+                <RecenterMap lat={location.lat} lng={location.lng} />
+
+                <Marker position={[location.lat, location.lng]}>
+                  <Popup>
+                    🚗 <strong>{location.name}</strong> <br /> Live Position
+                  </Popup>
+                </Marker>
+              </MapContainer>
+            </div>
+          )}
+        </div>
+
+      </div>
     </div>
   );
 }

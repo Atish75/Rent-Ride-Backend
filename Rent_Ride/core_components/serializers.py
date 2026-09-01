@@ -9,6 +9,11 @@ class CarSerializer(serializers.ModelSerializer):
         model = Car
         fields = '__all__'
         read_only_fields = ['owner']
+        extra_kwargs = {
+            'rc_document': {'required': True},
+            'insurance_document': {'required': True},
+            'puc_document': {'required': True},
+        }
 
 
 class BookedCarSerializer(serializers.ModelSerializer):
@@ -17,6 +22,7 @@ class BookedCarSerializer(serializers.ModelSerializer):
     class Meta:
         model = BookedCar
         fields = "__all__"
+        read_only_fields = ['otp']  
         extra_kwargs = {
             "customer_name": {"required": True},
             "customer_email": {"required": False},
@@ -27,3 +33,4 @@ class BookedCarSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         representation["car"] = CarSerializer(instance.car).data
         return representation
+

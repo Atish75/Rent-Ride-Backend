@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE_URL } from './config';
 
 export default function PaymentModal({ booking, onClose, onConfirm }) {
   const [paying, setPaying] = useState(false);
@@ -10,7 +11,7 @@ export default function PaymentModal({ booking, onClose, onConfirm }) {
   const handleConfirmPayment = async () => {
     setPaying(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8000/booked-cars/${booking.id}/pay/`, {
+      const res = await fetch(`${API_BASE_URL}/booked-cars/${booking.id}/pay/`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -29,27 +30,113 @@ export default function PaymentModal({ booking, onClose, onConfirm }) {
   };
 
   return (
-    <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-      <div style={{ backgroundColor: "#fff", padding: "2rem", borderRadius: "12px", width: "320px", textAlign: "center", fontFamily: "Arial, sans-serif" }}>
-        <h3>💳 Complete Payment</h3>
-        <p style={{ color: "#666" }}>Trip for <strong>{booking.car?.name}</strong></p>
+    <div style={{ 
+      position: "fixed", 
+      top: 0, 
+      left: 0, 
+      width: "100%", 
+      height: "100%", 
+      backgroundColor: "rgba(15, 23, 42, 0.5)", 
+      backdropFilter: "blur(3px)",
+      display: "flex", 
+      justifyContent: "center", 
+      alignItems: "center", 
+      zIndex: 1000 
+    }}>
+      <div style={{ 
+        backgroundColor: "#FFFFFF", 
+        padding: "2rem", 
+        borderRadius: "14px", 
+        width: "90%",
+        maxWidth: "340px", 
+        textAlign: "center", 
+        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+        color: "#0F172A",
+        WebkitFontSmoothing: "antialiased",
+        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.1)",
+        border: "1px solid #E2E8F0"
+      }}>
+        {/* HEADER AREA */}
+        <h3 style={{ 
+          margin: "0 0 0.35rem 0", 
+          fontSize: "1.25rem", 
+          fontWeight: "400", 
+          color: "#0F172A",
+          letterSpacing: "-0.5px"
+        }}>
+          💳 Complete Payment
+        </h3>
+        
+        <p style={{ margin: "0 0 1.25rem 0", color: "#64748B", fontSize: "0.875rem", fontWeight: "300" }}>
+          Trip for <strong style={{ fontWeight: "400", color: "#334155" }}>{booking.car?.name}</strong>
+        </p>
 
-        <img src={qrImageUrl} alt="Payment QR" style={{ margin: "1rem 0", borderRadius: "8px" }} />
+        {/* QR CODE CONTAINER */}
+        <div style={{ 
+          display: "inline-block",
+          padding: "0.75rem", 
+          backgroundColor: "#F8FAFC", 
+          borderRadius: "12px", 
+          border: "1px solid #E2E8F0",
+          marginBottom: "1rem"
+        }}>
+          <img 
+            src={qrImageUrl} 
+            alt="Payment QR" 
+            style={{ width: "190px", height: "190px", display: "block", borderRadius: "6px" }} 
+          />
+        </div>
 
-        <p style={{ fontSize: "1.4rem", fontWeight: "bold", color: "#28a745" }}>₹{booking.total_price}</p>
-        <p style={{ color: "#888", fontSize: "0.85rem" }}>Scan with any UPI app to pay</p>
+        {/* PRICE DISPLAY */}
+        <p style={{ 
+          margin: "0 0 0.2rem 0", 
+          fontSize: "1.5rem", 
+          fontWeight: "500", 
+          color: "#047857" 
+        }}>
+          ₹{booking.total_price}
+        </p>
+        
+        <p style={{ margin: "0 0 1.5rem 0", color: "#64748B", fontSize: "0.825rem", fontWeight: "300" }}>
+          Scan with any UPI app to pay
+        </p>
 
+        {/* ACTION BUTTONS */}
         <button
           onClick={handleConfirmPayment}
           disabled={paying}
-          style={{ marginTop: "1rem", width: "100%", padding: "0.7rem", backgroundColor: "#28a745", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
+          style={{ 
+            width: "100%", 
+            padding: "0.75rem", 
+            backgroundColor: "#047857", 
+            color: "#FFFFFF", 
+            border: "none", 
+            borderRadius: "6px", 
+            cursor: paying ? "not-allowed" : "pointer", 
+            fontWeight: "300",
+            fontSize: "0.9rem",
+            opacity: paying ? 0.7 : 1,
+            transition: "all 0.2s ease"
+          }}
         >
           {paying ? "Confirming..." : "✅ I've Paid"}
         </button>
 
         <button
           onClick={onClose}
-          style={{ marginTop: "0.5rem", width: "100%", padding: "0.6rem", backgroundColor: "#f0f0f0", border: "none", borderRadius: "6px", cursor: "pointer" }}
+          style={{ 
+            marginTop: "0.5rem", 
+            width: "100%", 
+            padding: "0.65rem", 
+            backgroundColor: "#F1F5F9", 
+            color: "#475569", 
+            border: "1px solid #CBD5E1", 
+            borderRadius: "6px", 
+            cursor: "pointer",
+            fontWeight: "300",
+            fontSize: "0.875rem",
+            transition: "all 0.2s ease"
+          }}
         >
           Cancel
         </button>

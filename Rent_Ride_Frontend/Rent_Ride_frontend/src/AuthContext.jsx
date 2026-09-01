@@ -1,7 +1,7 @@
 import { createContext, useState } from 'react';
 import axios from 'axios';
 import { Navigate } from 'react-router-dom';
-
+import { API_BASE_URL } from './config';
 // 1. Context Create karein
 export const AuthContext = createContext();
 
@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
 
     const loginUser = async (username, password) => {
         try {
-            const response = await axios.post('http://127.0.0.1:8000/api/token/', { username, password });
+            const response = await axios.post(`${API_BASE_URL}/api/token/`, { username, password });
             const accessToken = response.data.access;
             
             localStorage.setItem('access_token', accessToken);
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
 
     const registerUser = async (username, email, password) => {
         try {
-            const response = await axios.post('http://127.0.0.1:8000/api/register/', {
+            const response = await axios.post(`${API_BASE_URL}/api/register/`, {
                 username: username,
                 email: email,
                 password: password
