@@ -64,7 +64,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
+CORS_ALLOWED_ORIGINS = ["rent-ride-backend.onrender.com",
     "http://localhost:5173",  # React dev server
 ]
 
@@ -151,7 +151,7 @@ REST_FRAMEWORK = {
     )
 }
 
-#CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')          # git push ke time hata lena h !!!!!!!! 
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')          # git push ke time hata lena h !!!!!!!! 
 
 
 SIMPLE_JWT = {
