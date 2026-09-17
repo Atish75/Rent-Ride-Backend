@@ -64,7 +64,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = ["rent-ride-backend.onrender.com",
+CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # React dev server
 ]
 
