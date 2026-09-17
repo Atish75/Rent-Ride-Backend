@@ -15,7 +15,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from datetime import datetime
 from decimal import Decimal
 import math
-
+import os
 from .models import Car, BookedCar, Profile          
 from .serializers import CarSerializer, BookedCarSerializer   
 
@@ -35,7 +35,7 @@ def create_superuser_once(request):
     User.objects.create_superuser(
         username='Theguy',
         email='Theguy@rentride.com',
-        password='Theguy75@unique'
+        password=os.environ.get("DJANGO_SUPERUSER_PASSWORD")
     )
     return HttpResponse("Superuser created successfully!")
 COMPANY_SHARE = Decimal("0.08")
