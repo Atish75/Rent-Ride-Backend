@@ -45,7 +45,7 @@ The core RESTful API backend for **Rent Ride**, an end-to-end car rental platfor
 
 ---
 
-## ⚡ High-Availability & Cold-Start Optimization
+##⚡ High-Availability & Cold-Start Optimization
 
 Render free web services automatically spin down into a dormant state after 15 minutes of inbound network inactivity, causing a 50+ second cold-start latency delay on incoming user traffic.
 
