@@ -46,12 +46,12 @@ The core RESTful API backend for **Rent Ride**, an end-to-end car rental platfor
 ---
 
 ## ⚡ High-Availability & Cold-Start Optimization
-
+```text
 Render free web services automatically spin down into a dormant state after 15 minutes of inbound network inactivity, causing a 50+ second cold-start latency delay on incoming user traffic.
 
 To ensure near-instantaneous response times for the frontend:
 
-```text
+
   ┌─────────────────┐       GET /api/health/ (Every 10 mins)       ┌────────────────────────┐
   │  cron-job.org   │ ───────────────────────────────────────────> │  Django API (Render)   │
   │  (Cloud Pinger) │ <─────────────────────────────────────────── │  (Returns 200 OK)      │
